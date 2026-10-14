@@ -506,9 +506,9 @@ function LLMPane({
   return (
     <div className="card">
       <p style={{ color: "var(--muted)" }}>
-        Store provider keys here. The public chatbot can switch among providers that have a key. Answers stay grounded in porto.md.
+        Configure the active LLM and API keys here. The public chatbot always uses the active provider. Answers stay grounded in porto.md.
       </p>
-      <label>Default provider</label>
+      <label>Active provider</label>
       <select value={cfg.active} onChange={(e) => setCfg({ ...cfg, active: e.target.value })}>
         {cfg.providers.map((p) => (
           <option key={p.id} value={p.id}>

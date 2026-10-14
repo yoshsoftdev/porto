@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { getJSON, sendJSON } from "../api";
-import type { ChatProvider } from "../types";
+import { sendJSON } from "../api";
 
 type Msg = { role: "user" | "assistant"; content: string; off?: boolean };
 
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
-  const [providers, setProviders] = useState<ChatProvider[]>([]);
-  const [active, setActive] = useState("gemini");
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -19,16 +16,6 @@ export default function Chatbot() {
     },
   ]);
   const scroller = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    getJSON<{ active: string; providers: ChatProvider[] }>("/api/chat/providers")
-      .then((d) => {
-        setProviders(d.providers);
-        const firstOn = d.providers.find((p) => p.enabled)?.id;
-        setActive(firstOn || d.active || "gemini");
-      })
-      .catch(() => undefined);
-  }, []);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
@@ -50,7 +37,6 @@ export default function Chatbot() {
       history.pop();
       const res = await sendJSON<{ answer: string; off_topic: boolean }>("/api/chat", "POST", {
         message: text,
-        provider: active,
         history,
       });
       setMsgs((cur) => [...cur, { role: "assistant", content: res.answer, off: res.off_topic }]);
@@ -75,14 +61,6 @@ export default function Chatbot() {
                 Grounded in porto.md · off-topic questions are filtered
               </div>
             </div>
-            <select value={active} onChange={(e) => setActive(e.target.value)} aria-label="LLM">
-              {providers.map((p) => (
-                <option key={p.id} value={p.id} disabled={!p.enabled}>
-                  {p.label}
-                  {!p.enabled ? " · no key" : ""}
-                </option>
-              ))}
-            </select>
           </header>
           <div className="msgs" ref={scroller}>
             {msgs.map((m, i) => (

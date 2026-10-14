@@ -49,18 +49,14 @@ func (s *Server) ListProviders(c *gin.Context) {
 
 func (s *Server) Chat(c *gin.Context) {
 	var req struct {
-		Message  string        `json:"message"`
-		Provider string        `json:"provider"`
-		History  []llm.Message `json:"history"`
+		Message string        `json:"message"`
+		History []llm.Message `json:"history"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil || strings.TrimSpace(req.Message) == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "message required"})
 		return
 	}
-	provider := req.Provider
-	if provider == "" {
-		provider = s.getSetting("llm_active")
-	}
+	provider := s.getSetting("llm_active")
 	if provider == "" {
 		provider = string(llm.Gemini)
 	}

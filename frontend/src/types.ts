@@ -61,12 +61,6 @@ export type Project = {
   image_urls: string[];
 };
 
-export type ChatProvider = {
-  id: string;
-  label: string;
-  enabled: boolean;
-};
-
 export type LLMConfig = {
   active: string;
   providers: { id: string; model: string; has_key: boolean; enabled: boolean }[];

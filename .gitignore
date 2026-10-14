@@ -11,3 +11,4 @@ backend/server
 backend/tmp/
 .idea/
 .vscode/
+DEPLOY.md
