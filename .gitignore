@@ -1,0 +1,13 @@
+.DS_Store
+.env
+.env.local
+*.db
+*.sqlite
+node_modules/
+dist/
+frontend/dist/
+backend/porto.db
+backend/server
+backend/tmp/
+.idea/
+.vscode/
