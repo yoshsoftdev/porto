@@ -26,8 +26,8 @@ export default function Home() {
       <header className="topbar">
         <div className="wrap topbar-inner">
           <a className="brand" href="#/">
-            <b>YSH</b>
-            <span>backend / integration</span>
+            <b>Yo Shandy</b>
+            <span>Backend & Integration</span>
           </a>
           <nav className="nav">
             <a
