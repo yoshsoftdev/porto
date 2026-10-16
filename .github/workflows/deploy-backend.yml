@@ -1,0 +1,103 @@
+
+name: Deploy Go Backend to VPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Run Go tests
+        working-directory: backend
+        run: go test ./...
+
+      - name: Build Linux binary
+        working-directory: backend
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+            go build -o server .
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload binary to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          scp -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
+            backend/server \
+            "$VPS_USER@$VPS_HOST:/opt/yosh-porto/server.new"
+
+      - name: Restart backend service
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" '
+              set -e
+              cd /opt/yosh-porto
+              mv server.new server
+              sudo -n /usr/bin/systemctl restart yosh-porto
+              sudo -n /usr/bin/systemctl is-active yosh-porto
+            '
+
+      - name: Verify API health
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" '
+              for i in $(seq 1 10); do
+                if curl -fsS http://127.0.0.1:8080/health; then
+                  echo
+                  exit 0
+                fi
+                sleep 2
+              done
+
+              echo "Health check failed"
+              sudo -n /usr/bin/journalctl \
+                -u yosh-porto -n 50 --no-pager
+              exit 1
+            '
